@@ -5,9 +5,10 @@ defmodule OpenaiEx.Application do
 
   @impl true
   def start(_type, _args) do
+    finch_opts = Application.get_env(:openai_ex, :http, []) |> Keyword.merge(name: OpenaiEx.Finch)
+
     children = [
-      {Finch, name: OpenaiEx.Finch},
-      {DynamicSupervisor, strategy: :one_for_one, name: OpenaiEx.FinchSupervisor}
+      {Finch, finch_opts}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)
