@@ -7,20 +7,26 @@ defmodule OpenaiEx.HttpSse do
 
   @doc false
   def post(openai = %OpenaiEx{}, url, json: json) do
-    request = OpenaiEx.Http.build_post(openai, url, json: json)
-
     me = self()
     ref = make_ref()
 
     task =
       Task.async(fn ->
-        on_chunk = fn chunk, _acc -> send(me, {:chunk, chunk, ref}) end
-        request |> Finch.stream(OpenaiEx.Finch, nil, on_chunk)
+        on_chunk = fn {:data, data}, acc ->
+          send(me, {:chunk, {:data, data}, ref})
+
+          {:cont, acc}
+        end
+
+        Req.post!(openai.base_url <> url,
+          headers: OpenaiEx.Http.headers(openai),
+          json: json,
+          finch: OpenaiEx.Finch,
+          into: on_chunk
+        )
+
         send(me, {:done, ref})
       end)
-
-    _status = receive(do: ({:chunk, {:status, status}, ^ref} -> status))
-    _headers = receive(do: ({:chunk, {:headers, headers}, ^ref} -> headers))
 
     Stream.resource(fn -> {"", ref, task} end, &next_sse/1, fn {_data, _ref, task} ->
       Task.shutdown(task)

@@ -14,44 +14,43 @@ defmodule OpenaiEx.Http do
 
   @doc false
   def post(openai = %OpenaiEx{}, url) do
-    post(openai, url, json: %{})
+    Req.post!(
+      openai.base_url <> url,
+      headers: headers(openai),
+      finch: OpenaiEx.Finch
+    ).body
   end
 
   @doc false
   def post(openai = %OpenaiEx{}, url, multipart: multipart) do
-    :post
-    |> Finch.build(
-      openai.base_url <> url,
-      headers(openai) ++
-        [
-          {"Content-Type", Multipart.content_type(multipart, "multipart/form-data")},
-          {"Content-Length", to_string(Multipart.content_length(multipart))}
-        ],
-      {:stream, Multipart.body_stream(multipart)}
-    )
-    |> finch_run()
+    Req.post!(openai.base_url <> url,
+      headers:
+        headers(openai) ++
+          [
+            {"Content-Type", Multipart.content_type(multipart, "multipart/form-data")},
+            {"Content-Length", to_string(Multipart.content_length(multipart))}
+          ],
+      body: Multipart.body_stream(multipart),
+      finch: OpenaiEx.Finch
+    ).body
   end
 
   @doc false
   def post(openai = %OpenaiEx{}, url, json: json) do
-    build_post(openai, url, json: json)
-    |> finch_run()
+    Req.post!(openai.base_url <> url,
+      headers:
+        headers(openai) ++ [{"Content-Type", "application/json"}, {"Accept", "application/json"}],
+      json: json,
+      finch: OpenaiEx.Finch
+    ).body
   end
 
-  @doc false
   def post_no_decode(openai = %OpenaiEx{}, url, json: json) do
-    build_post(openai, url, json: json)
-    |> finch_run_no_decode()
-  end
-
-  @doc false
-  def build_post(openai = %OpenaiEx{}, url, json: json) do
-    :post
-    |> Finch.build(
-      openai.base_url <> url,
-      headers(openai) ++ [{"Content-Type", "application/json"}],
-      Jason.encode_to_iodata!(json)
-    )
+    Req.post!(openai.base_url <> url,
+      headers: headers(openai) ++ [{"Content-Type", "application/json"}],
+      json: json,
+      finch: OpenaiEx.Finch
+    ).body
   end
 
   @doc false
@@ -62,40 +61,33 @@ defmodule OpenaiEx.Http do
       |> URI.append_query(params |> URI.encode_query())
       |> URI.to_string()
 
-    openai |> OpenaiEx.Http.get(query)
+    openai |> get(query)
   end
 
   @doc false
   def get(openai = %OpenaiEx{}, url) do
-    :get
-    |> Finch.build(openai.base_url <> url, headers(openai))
-    |> finch_run()
+    Req.get!(
+      openai.base_url <> url,
+      headers: headers(openai) ++ [{"Accept", "application/json"}],
+      finch: OpenaiEx.Finch
+    ).body
   end
 
   def get_no_decode(openai = %OpenaiEx{}, url) do
-    :get
-    |> Finch.build(openai.base_url <> url, headers(openai))
-    |> finch_run_no_decode()
+    Req.get!(
+      openai.base_url <> url,
+      headers: headers(openai),
+      finch: OpenaiEx.Finch
+    ).body
   end
 
   @doc false
   def delete(openai = %OpenaiEx{}, url) do
-    :delete
-    |> Finch.build(openai.base_url <> url, headers(openai))
-    |> finch_run()
-  end
-
-  @doc false
-  def finch_run(finch_request) do
-    finch_request
-    |> finch_run_no_decode()
-    |> Jason.decode!()
-  end
-
-  def finch_run_no_decode(finch_request) do
-    finch_request
-    |> Finch.request!(OpenaiEx.Finch, receive_timeout: 120_000)
-    |> Map.get(:body)
+    Req.delete!(
+      openai.base_url <> url,
+      headers: headers(openai) ++ [{"Accept", "application/json"}],
+      finch: OpenaiEx.Finch
+    ).body
   end
 
   @doc false
