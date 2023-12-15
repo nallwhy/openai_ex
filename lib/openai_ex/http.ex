@@ -15,7 +15,8 @@ defmodule OpenaiEx.Http do
   defp opts(opts) do
     [
       finch: OpenaiEx.Finch,
-      receive_timeout: 120_000
+      receive_timeout: 120_000,
+      retry: :transient
     ]
     |> Keyword.merge(opts)
   end
