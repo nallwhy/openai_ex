@@ -101,15 +101,24 @@ defmodule OpenaiEx.Http do
     |> request!()
   end
 
-  defp request!(req) do
-    req
-    |> Req.update(
-      finch: OpenaiEx.Finch,
-      receive_timeout: 120_000,
-      retry: :transient
-    )
-    |> Req.request!()
-    |> Map.get(:body)
+  @max_try_count 2
+  defp request!(req, try_count \\ 1) do
+    try do
+      req
+      |> Req.update(
+        finch: OpenaiEx.Finch,
+        receive_timeout: 120_000,
+        retry: :transient
+      )
+      |> Req.request!()
+      |> Map.get(:body)
+    rescue
+      e ->
+        case try_count do
+          @max_try_count -> raise e
+          _ -> request!(req, try_count + 1)
+        end
+    end
   end
 
   @doc false
