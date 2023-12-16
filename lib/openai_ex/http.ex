@@ -12,60 +12,53 @@ defmodule OpenaiEx.Http do
     base ++ org ++ beta
   end
 
-  defp opts(opts) do
-    [
-      finch: OpenaiEx.Finch,
-      receive_timeout: 120_000,
-      retry: :transient
-    ]
-    |> Keyword.merge(opts)
-  end
-
   @doc false
   def post(openai = %OpenaiEx{}, url) do
-    Req.post!(
-      openai.base_url <> url,
-      opts(headers: headers(openai))
-    ).body
+    Req.new(
+      method: :post,
+      url: openai.base_url <> url,
+      headers: headers(openai)
+    )
+    |> request!()
   end
 
   @doc false
   def post(openai = %OpenaiEx{}, url, multipart: multipart) do
-    Req.post!(
-      openai.base_url <> url,
-      opts(
-        headers:
-          headers(openai) ++
-            [
-              {"Content-Type", Multipart.content_type(multipart, "multipart/form-data")},
-              {"Content-Length", to_string(Multipart.content_length(multipart))}
-            ],
-        body: Multipart.body_stream(multipart)
-      )
-    ).body
+    Req.new(
+      method: :post,
+      url: openai.base_url <> url,
+      headers:
+        headers(openai) ++
+          [
+            {"Content-Type", Multipart.content_type(multipart, "multipart/form-data")},
+            {"Content-Length", to_string(Multipart.content_length(multipart))}
+          ],
+      body: Multipart.body_stream(multipart)
+    )
+    |> request!()
   end
 
   @doc false
   def post(openai = %OpenaiEx{}, url, json: json) do
-    Req.post!(
-      openai.base_url <> url,
-      opts(
-        headers:
-          headers(openai) ++
-            [{"Content-Type", "application/json"}, {"Accept", "application/json"}],
-        json: json
-      )
-    ).body
+    Req.new(
+      method: :post,
+      url: openai.base_url <> url,
+      headers:
+        headers(openai) ++
+          [{"Content-Type", "application/json"}, {"Accept", "application/json"}],
+      json: json
+    )
+    |> request!()
   end
 
   def post_no_decode(openai = %OpenaiEx{}, url, json: json) do
-    Req.post!(
-      openai.base_url <> url,
-      opts(
-        headers: headers(openai) ++ [{"Content-Type", "application/json"}],
-        json: json
-      )
-    ).body
+    Req.new(
+      method: :post,
+      url: openai.base_url <> url,
+      headers: headers(openai) ++ [{"Content-Type", "application/json"}],
+      json: json
+    )
+    |> request!()
   end
 
   @doc false
@@ -81,25 +74,42 @@ defmodule OpenaiEx.Http do
 
   @doc false
   def get(openai = %OpenaiEx{}, url) do
-    Req.get!(
-      openai.base_url <> url,
-      opts(headers: headers(openai) ++ [{"Accept", "application/json"}])
-    ).body
+    Req.new(
+      method: :get,
+      url: openai.base_url <> url,
+      headers: headers(openai) ++ [{"Accept", "application/json"}]
+    )
+    |> request!()
   end
 
   def get_no_decode(openai = %OpenaiEx{}, url) do
-    Req.get!(
-      openai.base_url <> url,
-      opts(headers: headers(openai))
-    ).body
+    Req.new(
+      method: :get,
+      url: openai.base_url <> url,
+      headers: headers(openai)
+    )
+    |> request!()
   end
 
   @doc false
   def delete(openai = %OpenaiEx{}, url) do
-    Req.delete!(
-      openai.base_url <> url,
-      opts(headers: headers(openai) ++ [{"Accept", "application/json"}])
-    ).body
+    Req.new(
+      method: :delete,
+      url: openai.base_url <> url,
+      headers: headers(openai) ++ [{"Accept", "application/json"}]
+    )
+    |> request!()
+  end
+
+  defp request!(req) do
+    req
+    |> Req.update(
+      finch: OpenaiEx.Finch,
+      receive_timeout: 120_000,
+      retry: :transient
+    )
+    |> Req.request!()
+    |> Map.get(:body)
   end
 
   @doc false
