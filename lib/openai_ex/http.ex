@@ -101,24 +101,35 @@ defmodule OpenaiEx.Http do
     |> request!()
   end
 
-  @max_try_count 2
   defp request!(req, try_count \\ 1) do
     try do
       req
       |> Req.update(
         finch: OpenaiEx.Finch,
-        receive_timeout: 120_000,
+        receive_timeout: get_receive_timeout(),
         retry: :transient
       )
       |> Req.request!()
       |> Map.get(:body)
     rescue
       e ->
-        case try_count do
-          @max_try_count -> raise e
-          _ -> request!(req, try_count + 1)
+        case try_count < get_max_try_count() do
+          true -> request!(req, try_count + 1)
+          false -> raise e
         end
     end
+  end
+
+  @default_receive_timeout :timer.minutes(2)
+  defp get_receive_timeout() do
+    Application.get_env(:openai_ex, :http, [])
+    |> Keyword.get(:receive_timeout, @default_receive_timeout)
+  end
+
+  @default_max_try_count 2
+  defp get_max_try_count() do
+    Application.get_env(:openai_ex, :http, [])
+    |> Keyword.get(:max_try_count, @default_max_try_count)
   end
 
   @doc false

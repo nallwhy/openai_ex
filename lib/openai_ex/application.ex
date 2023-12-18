@@ -5,7 +5,10 @@ defmodule OpenaiEx.Application do
 
   @impl true
   def start(_type, _args) do
-    finch_opts = Application.get_env(:openai_ex, :http, []) |> Keyword.merge(name: OpenaiEx.Finch)
+    finch_opts =
+      Application.get_env(:openai_ex, :http, [])
+      |> Keyword.get(:finch_opts, [])
+      |> Keyword.merge(name: OpenaiEx.Finch)
 
     children = [
       {Finch, finch_opts}
