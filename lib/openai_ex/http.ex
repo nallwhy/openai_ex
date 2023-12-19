@@ -1,5 +1,6 @@
 defmodule OpenaiEx.Http do
   @moduledoc false
+  require Logger
 
   @doc false
   def headers(openai = %OpenaiEx{}) do
@@ -114,8 +115,12 @@ defmodule OpenaiEx.Http do
     rescue
       e ->
         case try_count < get_max_try_count() do
-          true -> request!(req, try_count + 1)
-          false -> raise e
+          true ->
+            Logger.warning("OpenaiEX retrying request (try #{try_count}): #{inspect(e)}")
+            request!(req, try_count + 1)
+
+          false ->
+            raise e
         end
     end
   end
