@@ -117,6 +117,7 @@ defmodule OpenaiEx.Http do
         case try_count < get_max_try_count() do
           true ->
             Logger.warning("OpenaiEX retrying request (try #{try_count}): #{inspect(e)}")
+            Process.sleep(:timer.seconds(1))
             request!(req, try_count + 1)
 
           false ->
