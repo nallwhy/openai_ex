@@ -108,7 +108,8 @@ defmodule OpenaiEx.Http do
       |> Req.update(
         finch: OpenaiEx.Finch,
         receive_timeout: get_receive_timeout(),
-        retry: :transient
+        retry: :transient,
+        retry_log_level: :info
       )
       |> Req.request!()
       |> Map.get(:body)
